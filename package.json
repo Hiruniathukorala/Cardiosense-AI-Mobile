@@ -8,7 +8,10 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "backend": "cd backend && PORT=5001 npm start"
+    "backend": "cd backend && PORT=5001 npm start",
+    "mobile:ios": "cd cardiosense_mobile && flutter run -d 7497D5A0-8DBE-465D-977C-D2CF42FAAFC7",
+    "mobile:android": "cd cardiosense_mobile && flutter run -d Pixel_8",
+    "mobile:web": "cd cardiosense_mobile && flutter run -d chrome"
   },
   "dependencies": {
     "lucide-react": "^1.14.0",
