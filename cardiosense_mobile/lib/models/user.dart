@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class User {
   final String id;
   final String name;
@@ -14,12 +16,20 @@ class User {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
+    String parsedDate = '';
+    var rawDate = json['createdAt'];
+    if (rawDate is Timestamp) {
+      parsedDate = rawDate.toDate().toIso8601String();
+    } else if (rawDate is String) {
+      parsedDate = rawDate;
+    }
+
     return User(
       id: json['id'] ?? '',
       name: json['name'] ?? '',
       email: json['email'] ?? '',
       role: json['role'] ?? '',
-      createdAt: json['createdAt'] ?? '',
+      createdAt: parsedDate,
     );
   }
 

@@ -1,11 +1,14 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../config/api_config.dart';
 import '../models/user.dart';
 
 class AuthService extends ChangeNotifier {
+  final fb_auth.FirebaseAuth _auth = fb_auth.FirebaseAuth.instance;
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+
   User? _currentUser;
   bool _isLoading = false;
 
@@ -17,6 +20,18 @@ class AuthService extends ChangeNotifier {
 
   AuthService() {
     _loadSession();
+    // Also listen to auth state changes from Firebase
+    _auth.authStateChanges().listen((fb_auth.User? fbUser) async {
+      if (fbUser == null) {
+        _currentUser = null;
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(_userKey);
+        notifyListeners();
+      } else if (_currentUser == null) {
+        // Try to recover user data from Firestore if session lost
+        await _fetchUserData(fbUser.uid);
+      }
+    });
   }
 
   Future<void> _loadSession() async {
@@ -32,6 +47,20 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  Future<void> _fetchUserData(String uid) async {
+    try {
+      final doc = await _db.collection('users').doc(uid).get();
+      if (doc.exists) {
+        _currentUser = User.fromJson({...doc.data()!, 'id': doc.id});
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_userKey, jsonEncode(_currentUser!.toJson()));
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error fetching user data: $e');
+    }
+  }
+
   Future<Map<String, dynamic>> login({
     required String email,
     required String password,
@@ -41,20 +70,25 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await http.post(
-        Uri.parse(ApiConfig.loginUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email.trim(),
-          'password': password,
-          'role': role,
-        }),
+      // 1. Firebase Authentication
+      final result = await _auth.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
       );
 
-      final data = jsonDecode(response.body);
+      // 2. Fetch User Details from Firestore to verify role
+      final doc = await _db.collection('users').doc(result.user!.uid).get();
+      
+      if (doc.exists) {
+        final userData = doc.data()!;
+        if (userData['role'] != role) {
+          await _auth.signOut();
+          _isLoading = false;
+          notifyListeners();
+          return {'success': false, 'message': 'Incorrect role selected for this account.'};
+        }
 
-      if (response.statusCode == 200 && data['success'] == true) {
-        _currentUser = User.fromJson(data['user']);
+        _currentUser = User.fromJson({...userData, 'id': doc.id});
         
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(_userKey, jsonEncode(_currentUser!.toJson()));
@@ -63,14 +97,19 @@ class AuthService extends ChangeNotifier {
         notifyListeners();
         return {'success': true};
       } else {
+        await _auth.signOut();
         _isLoading = false;
         notifyListeners();
-        return {'success': false, 'message': data['message'] ?? 'Authentication failed.'};
+        return {'success': false, 'message': 'User profile not found.'};
       }
+    } on fb_auth.FirebaseAuthException catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      return {'success': false, 'message': e.message ?? 'Authentication failed.'};
     } catch (e) {
       _isLoading = false;
       notifyListeners();
-      return {'success': false, 'message': 'Network connection failed. Make sure the backend is running at ${ApiConfig.baseUrl}'};
+      return {'success': false, 'message': 'An unexpected error occurred.'};
     }
   }
 
@@ -84,35 +123,39 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await http.post(
-        Uri.parse(ApiConfig.registerUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'name': name.trim(),
-          'email': email.trim().toLowerCase(),
-          'password': password,
-          'role': role,
-        }),
+      // 1. Create User in Firebase Auth
+      final result = await _auth.createUserWithEmailAndPassword(
+        email: email.trim().toLowerCase(),
+        password: password,
       );
 
-      final data = jsonDecode(response.body);
+      // 2. Store additional user data in Firestore
+      final userData = {
+        'name': name.trim(),
+        'email': email.trim().toLowerCase(),
+        'role': role,
+        'createdAt': FieldValue.serverTimestamp(),
+        'isActive': true,
+      };
+
+      await _db.collection('users').doc(result.user!.uid).set(userData);
 
       _isLoading = false;
       notifyListeners();
-
-      if (response.statusCode == 200 && data['success'] == true) {
-        return {'success': true};
-      } else {
-        return {'success': false, 'message': data['message'] ?? 'Registration failed.'};
-      }
+      return {'success': true};
+    } on fb_auth.FirebaseAuthException catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      return {'success': false, 'message': e.message ?? 'Registration failed.'};
     } catch (e) {
       _isLoading = false;
       notifyListeners();
-      return {'success': false, 'message': 'Network connection failed. Make sure backend is running.'};
+      return {'success': false, 'message': 'An unexpected error occurred.'};
     }
   }
 
   Future<void> logout() async {
+    await _auth.signOut();
     _currentUser = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_userKey);

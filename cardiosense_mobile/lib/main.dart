@@ -1,13 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'services/auth_service.dart';
 import 'services/report_service.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/main_navigation.dart';
 
-void main() {
+// IMPORTANT: If you have generated firebase_options.dart using FlutterFire CLI,
+// uncomment the line below and the configuration in main().
+import 'firebase_options.dart';
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  try {
+    // For Web, you usually pass the options here if not using firebase_options.dart
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform,
+      // options: DefaultFirebaseOptions.currentPlatform, 
+    );
+  } catch (e) {
+    debugPrint('Firebase initialization warning: $e');
+  }
+
   runApp(
     MultiProvider(
       providers: [
@@ -32,43 +47,8 @@ class CardioSenseApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF0A66C2),
           primary: const Color(0xFF0A66C2),
-          secondary: const Color(0xFFEBF3FF),
-          surface: const Color(0xFFF3F6F9),
-          error: const Color(0xFFEF4444),
         ),
-        textTheme: GoogleFonts.interTextTheme(
-          Theme.of(context).textTheme,
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: const Color(0xFFFAFAFA),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFF0A66C2), width: 1.5),
-          ),
-          labelStyle: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: Color(0xFF6B7280),
-          ),
-        ),
-        cardTheme: CardThemeData(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: Color(0xFFE5E7EB), width: 0.5),
-          ),
-        ),
+        textTheme: GoogleFonts.interTextTheme(Theme.of(context).textTheme),
       ),
       home: const AuthenticationWrapper(),
     );
@@ -81,12 +61,6 @@ class AuthenticationWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authService = Provider.of<AuthService>(context);
-
-    // Dynamic routing wrapper
-    if (authService.isAuthenticated) {
-      return const MainNavigation();
-    } else {
-      return const LoginScreen();
-    }
+    return authService.isAuthenticated ? const MainNavigation() : const LoginScreen();
   }
 }

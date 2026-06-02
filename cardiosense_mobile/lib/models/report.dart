@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class ReportCondition {
   final String name;
   final String severity; // 'High', 'Medium', 'Low'
@@ -70,6 +72,15 @@ class Report {
     this.qtInterval = '400 ms',
   });
 
+  static String _parseDate(dynamic value) {
+    if (value is Timestamp) {
+      return value.toDate().toIso8601String();
+    } else if (value is String) {
+      return value;
+    }
+    return '';
+  }
+
   factory Report.fromJson(Map<String, dynamic> json) {
     var rawConditions = json['conditions'] as List?;
     List<ReportCondition> parsedConditions = rawConditions != null
@@ -79,10 +90,12 @@ class Report {
     return Report(
       id: json['id'] ?? '',
       reportId: json['reportId'] ?? '',
-      createdAt: json['createdAt'] ?? '',
+      createdAt: _parseDate(json['createdAt']),
       patientName: json['patientName'] ?? '',
       patientEmail: json['patientEmail'] ?? '',
-      patientAge: json['patientAge'] != null ? int.tryParse(json['patientAge'].toString()) ?? json['patientAge'] as int? : null,
+      patientAge: json['patientAge'] != null 
+          ? int.tryParse(json['patientAge'].toString()) ?? json['patientAge'] as int? 
+          : null,
       patientGender: json['patientGender'],
       symptoms: json['symptoms'] ?? '',
       notes: json['notes'] ?? '',
@@ -94,7 +107,7 @@ class Report {
       fileUrl: json['fileUrl'],
       doctorNotes: json['doctorNotes'] ?? '',
       doctorAssessment: json['doctorAssessment'] ?? '',
-      finalizedAt: json['finalizedAt'],
+      finalizedAt: json['finalizedAt'] != null ? _parseDate(json['finalizedAt']) : null,
       // Mock metrics to match backend report definitions if missing
       heartRate: json['heartRate'] ?? (json['status'] == 'Abnormal' ? '112 bpm' : '72 bpm'),
       prInterval: json['prInterval'] ?? '140 ms',

@@ -84,7 +84,6 @@ class _UploadEcgScreenState extends State<UploadEcgScreen> {
         notes: _notesController.text,
         cardiologistName: user.name,
         cardiologistEmail: user.email,
-        filePath: _selectedFile?.path,
         fileBytes: _selectedFile?.bytes,
         fileName: _selectedFile?.name,
       );
