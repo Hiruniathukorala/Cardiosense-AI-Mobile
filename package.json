@@ -1,33 +1,20 @@
 {
   "name": "cardiosense-ai",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "CardioSense AI - Mobile App with Firebase Backend",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview",
-    "backend": "cd backend && PORT=5001 npm start",
-    "mobile:ios": "cd cardiosense_mobile && flutter run -d 7497D5A0-8DBE-465D-977C-D2CF42FAAFC7",
-    "mobile:android": "cd cardiosense_mobile && flutter run -d Pixel_8",
-    "mobile:web": "cd cardiosense_mobile && flutter run -d chrome"
+    "backend": "cd backend && npm run dev",
+    "mobile:android": "cd cardiosense_mobile && flutter run",
+    "mobile:ios": "cd cardiosense_mobile && flutter run",
+    "mobile:web": "cd cardiosense_mobile && flutter run -d chrome",
+    "clean": "cd cardiosense_mobile && flutter clean"
   },
-  "dependencies": {
-    "lucide-react": "^1.14.0",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5",
-    "react-router-dom": "^7.14.2"
-  },
-  "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
-    "eslint": "^10.2.1",
-    "eslint-plugin-react-hooks": "^7.1.1",
-    "eslint-plugin-react-refresh": "^0.5.2",
-    "globals": "^17.5.0",
-    "vite": "^8.0.10"
-  }
+  "keywords": [
+    "flutter",
+    "firebase",
+    "cardiology",
+    "ai"
+  ]
 }
